@@ -49,6 +49,12 @@ module.exports = {
         }
       },
 
+      fetchRevisions: function(context) {
+        return this._list(context).then(function(list) {
+          context.revisions = list;
+        }.bind(this));
+      },
+
       upload: function(context) {
         var self = this;
         var client = this._createClient();
@@ -112,8 +118,10 @@ module.exports = {
         var _this = this;
 
         return new Promise(function(resolve, reject) {
-          _this.list().then(function(existingEntries) {
-            if(existingEntries.indexOf(key) > -1) {
+          _this._list(context).then(function(existingEntries) {
+            if(existingEntries.some(function(entry) {
+              return entry.revision === key;
+            })) {
               return true;
             } else {
               reject("Revision " + key + " not in manifest");
@@ -144,29 +152,29 @@ module.exports = {
 
         this.log("Activated revision " + key);
       },
-      list: function(context) {
+      _currentKey: function(context) {
+        return context.project.name() + ':current';
+      },
+      _current: function(context) {
         var client = this._createClient();
 
         return new Promise(function(resolve, reject) {
           // create table if not already existent
           client.createTableIfNotExists(AZURE_TABLE_NAME, function(error, result, response) {
             if(!error){
+              // find the current tag
               var query = new azure.TableQuery()
-                      .where('PartitionKey eq ?', AZURE_MANIFEST_TAG);
+                      .where('PartitionKey eq ?', AZURE_MANIFEST_TAG)
+                      .and('RowKey eq ?', this._currentKey(context));
 
               // find the list of uploaded revisions
               client.queryEntities(AZURE_TABLE_NAME, query, null, function(error, result, response) {
-                if(!error) {
-                  var sortedEntries = result.entries;
-                  sortedEntries.sort(function(a, b) {
-                    return new Date(b["Timestamp"]["_"]).getTime() - new Date(a["Timestamp"]["_"]).getTime();
-                  });
-
-                  var entries = sortedEntries.map(function(entry) {
-                    return entry["RowKey"]["_"];
-                  });
-
-                  resolve(entries);
+                if(!error){
+                  if(result && result.entries.length > 0) {
+                    resolve(result.entries[0]["content"]["_"]);
+                  } else {
+                    resolve(null);
+                  }
                 } else {
                   reject(error);
                 }
@@ -174,8 +182,45 @@ module.exports = {
             } else {
               reject(error);
             }
-          });
-        });
+          }.bind(this));
+        }.bind(this));
+      },
+      _list: function(context) {
+        var client = this._createClient();
+
+        return this._current(context).then(function(current) {
+          return new Promise(function(resolve, reject) {
+            // create table if not already existent
+            client.createTableIfNotExists(AZURE_TABLE_NAME, function(error, result, response) {
+              if(!error){
+                var query = new azure.TableQuery()
+                        .where('PartitionKey eq ?', AZURE_MANIFEST_TAG)
+                        .and('RowKey ne ?', this._currentKey(context));
+
+                // find the list of uploaded revisions
+                client.queryEntities(AZURE_TABLE_NAME, query, null, function(error, result, response) {
+                  if(!error) {
+                    var sortedEntries = result.entries;
+                    sortedEntries.sort(function(a, b) {
+                      return new Date(b["Timestamp"]["_"]).getTime() - new Date(a["Timestamp"]["_"]).getTime();
+                    });
+
+                    var entries = sortedEntries.map(function(entry) {
+                      var revision = entry["RowKey"]["_"];
+                      return { revision: revision, timestamp: new Date(entry["Timestamp"]["_"]).getTime(), active: current === revision };
+                    });
+
+                    resolve(entries);
+                  } else {
+                    reject(error);
+                  }
+                });
+              } else {
+                reject(error);
+              }
+            }.bind(this));
+          }.bind(this));
+        }.bind(this));
       }
     });
 
