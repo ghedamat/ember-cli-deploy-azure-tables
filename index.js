@@ -37,7 +37,7 @@ module.exports = {
       },
 
       _key: function(context) {
-        var revisionKey = context.commandOptions.revision || context.revisionKey.substr(0, 8);
+        var revisionKey = context.commandOptions.revision || context.revisionData.revisionKey.substr(0, 8);
         return context.project.name() + ':' + revisionKey;
       },
 
