@@ -60,7 +60,7 @@ module.exports = {
         var client = this._createClient();
         var key = this._key(context);
 
-        this.log('deploying index.html to Azure Tables...');
+        this.log('deploying index.html to Azure Tables...', { verbose: true });
 
         return readFile(path.join(context.distDir, "index.html"))
       	.then(function(buffer) {
@@ -109,7 +109,7 @@ module.exports = {
 
       didDeploy: function(context){
         var key = this._key(context);
-        this.log("deployed index.html under " + key);
+        this.log("deployed index.html under " + key, { verbose: true });
       },
 
       activate: function(context) {
@@ -150,7 +150,7 @@ module.exports = {
       didActivate: function(context) {
         var key = this._key(context);
 
-        this.log("Activated revision " + key);
+        this.log("Activated revision " + key, { verbose: true });
       },
       _currentKey: function(context) {
         return context.project.name() + ':current';

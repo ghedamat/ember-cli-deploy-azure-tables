@@ -1,6 +1,6 @@
 {
   "name": "ember-cli-deploy-azure-tables",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Deploy the bootstrap index.html of your Ember App to Azure Tables using ember-cli-deploy.",
   "directories": {
     "doc": "doc",
@@ -40,7 +40,7 @@
   "dependencies": {
     "azure-storage": "^0.4.2",
     "ember-cli-babel": "^5.0.0",
-    "ember-cli-deploy-plugin": "^0.1.2",
+    "ember-cli-deploy-plugin": "^0.2.0",
     "rsvp": "^3.0.18"
   },
   "ember-addon": {
